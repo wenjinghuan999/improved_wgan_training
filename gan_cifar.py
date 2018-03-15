@@ -16,10 +16,12 @@ import tflib.cifar10
 import tflib.inception_score
 import tflib.plot
 
+from six.moves import xrange
+
 # Download CIFAR-10 (Python version) at
 # https://www.cs.toronto.edu/~kriz/cifar.html and fill in the path to the
 # extracted files here!
-DATA_DIR = ''
+DATA_DIR = '../../data/cifar'
 if len(DATA_DIR) == 0:
     raise Exception('Please specify path to data directory in gan_cifar.py!')
 
@@ -190,7 +192,7 @@ with tf.Session() as session:
         else:
             disc_iters = CRITIC_ITERS
         for i in xrange(disc_iters):
-            _data = gen.next()
+            _data = next(gen)
             _disc_cost, _ = session.run([disc_cost, disc_train_op], feed_dict={real_data_int: _data})
             if MODE == 'wgan':
                 _ = session.run(clip_disc_weights)

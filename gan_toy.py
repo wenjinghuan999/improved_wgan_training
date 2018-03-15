@@ -15,6 +15,8 @@ import tflib as lib
 import tflib.ops.linear
 import tflib.plot
 
+from six.moves import xrange
+
 MODE = 'wgan-gp' # wgan or wgan-gp
 DATASET = '8gaussians' # 8gaussians, 25gaussians, swissroll
 DIM = 512 # Model dimensionality
@@ -132,12 +134,12 @@ else:
         )
     clip_disc_weights = tf.group(*clip_ops)
 
-print "Generator params:"
+print("Generator params:")
 for var in lib.params_with_name('Generator'):
-    print "\t{}\t{}".format(var.name, var.get_shape())
-print "Discriminator params:"
+    print("\t{}\t{}".format(var.name, var.get_shape()))
+print("Discriminator params:")
 for var in lib.params_with_name('Discriminator'):
-    print "\t{}\t{}".format(var.name, var.get_shape())
+    print("\t{}\t{}".format(var.name, var.get_shape()))
 
 frame_index = [0]
 def generate_image(true_dist):
@@ -235,7 +237,7 @@ with tf.Session() as session:
             _ = session.run(gen_train_op)
         # Train critic
         for i in xrange(CRITIC_ITERS):
-            _data = gen.next()
+            _data = next(gen)
             _disc_cost, _ = session.run(
                 [disc_cost, disc_train_op],
                 feed_dict={real_data: _data}
