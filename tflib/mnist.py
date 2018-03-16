@@ -3,7 +3,9 @@ import numpy
 import os
 import urllib
 import gzip
-import cPickle as pickle
+import pickle
+
+from six.moves import xrange
 
 def mnist_generator(data, batch_size, n_labelled, limit=None):
     images, targets = data
@@ -13,7 +15,7 @@ def mnist_generator(data, batch_size, n_labelled, limit=None):
     numpy.random.set_state(rng_state)
     numpy.random.shuffle(targets)
     if limit is not None:
-        print "WARNING ONLY FIRST {} MNIST DIGITS".format(limit)
+        print("WARNING ONLY FIRST {} MNIST DIGITS".format(limit))
         images = images.astype('float32')[:limit]
         targets = targets.astype('int32')[:limit]
     if n_labelled is not None:
@@ -47,15 +49,15 @@ def mnist_generator(data, batch_size, n_labelled, limit=None):
     return get_epoch
 
 def load(batch_size, test_batch_size, n_labelled=None):
-    filepath = '/tmp/mnist.pkl.gz'
+    filepath = '../../data/mnist/mnist.pkl.gz'
     url = 'http://www.iro.umontreal.ca/~lisa/deep/data/mnist/mnist.pkl.gz'
 
-    if not os.path.isfile(filepath):
-        print "Couldn't find MNIST dataset in /tmp, downloading..."
-        urllib.urlretrieve(url, filepath)
+    if not os.path.exists(filepath):
+        print("Couldn't find MNIST dataset in {}, downloading...".format(filepath))
+        urllib.request.urlretrieve(url, filepath)
 
-    with gzip.open('/tmp/mnist.pkl.gz', 'rb') as f:
-        train_data, dev_data, test_data = pickle.load(f)
+    with gzip.open('../../data/mnist/mnist.pkl.gz', 'rb') as f:
+        train_data, dev_data, test_data = pickle.load(f, encoding='bytes')
 
     return (
         mnist_generator(train_data, batch_size, n_labelled), 

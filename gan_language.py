@@ -12,9 +12,11 @@ import tflib.ops.linear
 import tflib.ops.conv1d
 import tflib.plot
 
+from six.moves import xrange
+
 # Download Google Billion Word at http://www.statmt.org/lm-benchmark/ and
 # fill in the path to the extracted files here!
-DATA_DIR = ''
+DATA_DIR = '../../data/language/1-billion-word-language-modeling-benchmark-r13output'
 if len(DATA_DIR) == 0:
     raise Exception('Please specify path to data directory in gan_language.py!')
 
@@ -27,7 +29,7 @@ CRITIC_ITERS = 10 # How many critic iterations per generator iteration. We
                   # use 10 for the results in the paper, but 5 should work fine
                   # as well.
 LAMBDA = 10 # Gradient penalty lambda hyperparameter.
-MAX_N_EXAMPLES = 10000000 # Max number of data examples to load. If data loading
+MAX_N_EXAMPLES = 100000 # Max number of data examples to load. If data loading
                           # is too slow or takes too much RAM, you can decrease
                           # this (at the expense of having less training data).
 
@@ -130,7 +132,7 @@ def inf_train_gen():
 true_char_ngram_lms = [language_helpers.NgramLanguageModel(i+1, lines[10*BATCH_SIZE:], tokenize=False) for i in xrange(4)]
 validation_char_ngram_lms = [language_helpers.NgramLanguageModel(i+1, lines[:10*BATCH_SIZE], tokenize=False) for i in xrange(4)]
 for i in xrange(4):
-    print "validation set JSD for n={}: {}".format(i+1, true_char_ngram_lms[i].js_with(validation_char_ngram_lms[i]))
+    print("validation set JSD for n={}: {}".format(i+1, true_char_ngram_lms[i].js_with(validation_char_ngram_lms[i])))
 true_char_ngram_lms = [language_helpers.NgramLanguageModel(i+1, lines, tokenize=False) for i in xrange(4)]
 
 with tf.Session() as session:
@@ -159,7 +161,7 @@ with tf.Session() as session:
 
         # Train critic
         for i in xrange(CRITIC_ITERS):
-            _data = gen.next()
+            _data = next(gen)
             _disc_cost, _ = session.run(
                 [disc_cost, disc_train_op],
                 feed_dict={real_inputs_discrete:_data}
@@ -177,7 +179,7 @@ with tf.Session() as session:
                 lm = language_helpers.NgramLanguageModel(i+1, samples, tokenize=False)
                 lib.plot.plot('js{}'.format(i+1), lm.js_with(true_char_ngram_lms[i]))
 
-            with open('samples_{}.txt'.format(iteration), 'w') as f:
+            with open('samples_{}.txt'.format(iteration), 'w', encoding='utf-8') as f:
                 for s in samples:
                     s = "".join(s)
                     f.write(s + "\n")

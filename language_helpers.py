@@ -1,6 +1,6 @@
 import collections
 import numpy as np
-import re
+from six.moves import xrange
 
 def tokenize_string(sample):
     return tuple(sample.lower().split(' '))
@@ -85,8 +85,8 @@ class NgramLanguageModel(object):
 
         return 0.5*(kl_p_m + kl_q_m) / np.log(2)
 
-def load_dataset(max_length, max_n_examples, tokenize=False, max_vocab_size=2048, data_dir='/home/ishaan/data/1-billion-word-language-modeling-benchmark-r13output'):
-    print "loading dataset..."
+def load_dataset(max_length, max_n_examples, tokenize=False, max_vocab_size=2048, data_dir=''):
+    print("loading dataset...")
 
     lines = []
 
@@ -94,7 +94,7 @@ def load_dataset(max_length, max_n_examples, tokenize=False, max_vocab_size=2048
 
     for i in xrange(99):
         path = data_dir+("/training-monolingual.tokenized.shuffled/news.en-{}-of-00100".format(str(i+1).zfill(5)))
-        with open(path, 'r') as f:
+        with open(path, 'r', encoding='utf-8') as f:
             for line in f:
                 line = line[:-1]
                 if tokenize:
@@ -137,7 +137,7 @@ def load_dataset(max_length, max_n_examples, tokenize=False, max_vocab_size=2048
         filtered_lines.append(tuple(filtered_line))
 
     for i in xrange(100):
-        print filtered_lines[i]
+        print(filtered_lines[i])
 
-    print "loaded {} lines in dataset".format(len(lines))
+    print("loaded {} lines in dataset".format(len(lines)))
     return filtered_lines, charmap, inv_charmap

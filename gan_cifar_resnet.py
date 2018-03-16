@@ -22,14 +22,16 @@ import functools
 import locale
 locale.setlocale(locale.LC_ALL, '')
 
+from six.moves import xrange
+
 # Download CIFAR-10 (Python version) at
 # https://www.cs.toronto.edu/~kriz/cifar.html and fill in the path to the
 # extracted files here!
-DATA_DIR = '/home/ishaan/data/cifar10'
+DATA_DIR = '../../data/cifar'
 if len(DATA_DIR) == 0:
     raise Exception('Please specify path to data directory in gan_cifar.py!')
 
-N_GPUS = 2
+N_GPUS = 1
 if N_GPUS not in [1,2]:
     raise Exception('Only 1 or 2 GPUs supported!')
 
@@ -52,7 +54,7 @@ ACGAN_SCALE = 1. # How to scale the critic's ACGAN loss relative to WGAN loss
 ACGAN_SCALE_G = 0.1 # How to scale generator's ACGAN loss relative to WGAN loss
 
 if CONDITIONAL and (not ACGAN) and (not NORMALIZATION_D):
-    print "WARNING! Conditional model without normalization in D might be effectively unconditional!"
+    print("WARNING! Conditional model without normalization in D might be effectively unconditional!")
 
 DEVICES = ['/gpu:{}'.format(i) for i in xrange(N_GPUS)]
 if len(DEVICES) == 1: # Hack because the code assumes 2 GPUs
@@ -189,14 +191,14 @@ with tf.Session() as session:
     fake_data_splits = []
     for i, device in enumerate(DEVICES):
         with tf.device(device):
-            fake_data_splits.append(Generator(BATCH_SIZE/len(DEVICES), labels_splits[i]))
+            fake_data_splits.append(Generator(BATCH_SIZE//len(DEVICES), labels_splits[i]))
 
     all_real_data = tf.reshape(2*((tf.cast(all_real_data_int, tf.float32)/256.)-.5), [BATCH_SIZE, OUTPUT_DIM])
     all_real_data += tf.random_uniform(shape=[BATCH_SIZE,OUTPUT_DIM],minval=0.,maxval=1./128) # dequantize
     all_real_data_splits = tf.split(all_real_data, len(DEVICES), axis=0)
 
-    DEVICES_B = DEVICES[:len(DEVICES)/2]
-    DEVICES_A = DEVICES[len(DEVICES)/2:]
+    DEVICES_B = DEVICES[:len(DEVICES)//2]
+    DEVICES_A = DEVICES[len(DEVICES)//2:]
 
     disc_costs = []
     disc_acgan_costs = []
@@ -217,18 +219,18 @@ with tf.Session() as session:
                 labels_splits[len(DEVICES_A)+i]
             ], axis=0)
             disc_all, disc_all_acgan = Discriminator(real_and_fake_data, real_and_fake_labels)
-            disc_real = disc_all[:BATCH_SIZE/len(DEVICES_A)]
-            disc_fake = disc_all[BATCH_SIZE/len(DEVICES_A):]
+            disc_real = disc_all[:BATCH_SIZE//len(DEVICES_A)]
+            disc_fake = disc_all[BATCH_SIZE//len(DEVICES_A):]
             disc_costs.append(tf.reduce_mean(disc_fake) - tf.reduce_mean(disc_real))
             if CONDITIONAL and ACGAN:
                 disc_acgan_costs.append(tf.reduce_mean(
-                    tf.nn.sparse_softmax_cross_entropy_with_logits(logits=disc_all_acgan[:BATCH_SIZE/len(DEVICES_A)], labels=real_and_fake_labels[:BATCH_SIZE/len(DEVICES_A)])
+                    tf.nn.sparse_softmax_cross_entropy_with_logits(logits=disc_all_acgan[:BATCH_SIZE//len(DEVICES_A)], labels=real_and_fake_labels[:BATCH_SIZE//len(DEVICES_A)])
                 ))
                 disc_acgan_accs.append(tf.reduce_mean(
                     tf.cast(
                         tf.equal(
-                            tf.to_int32(tf.argmax(disc_all_acgan[:BATCH_SIZE/len(DEVICES_A)], dimension=1)),
-                            real_and_fake_labels[:BATCH_SIZE/len(DEVICES_A)]
+                            tf.to_int32(tf.argmax(disc_all_acgan[:BATCH_SIZE//len(DEVICES_A)], dimension=1)),
+                            real_and_fake_labels[:BATCH_SIZE//len(DEVICES_A)]
                         ),
                         tf.float32
                     )
@@ -236,8 +238,8 @@ with tf.Session() as session:
                 disc_acgan_fake_accs.append(tf.reduce_mean(
                     tf.cast(
                         tf.equal(
-                            tf.to_int32(tf.argmax(disc_all_acgan[BATCH_SIZE/len(DEVICES_A):], dimension=1)),
-                            real_and_fake_labels[BATCH_SIZE/len(DEVICES_A):]
+                            tf.to_int32(tf.argmax(disc_all_acgan[BATCH_SIZE//len(DEVICES_A):], dimension=1)),
+                            real_and_fake_labels[BATCH_SIZE//len(DEVICES_A):]
                         ),
                         tf.float32
                     )
@@ -253,7 +255,7 @@ with tf.Session() as session:
                 labels_splits[len(DEVICES_A)+i],
             ], axis=0)
             alpha = tf.random_uniform(
-                shape=[BATCH_SIZE/len(DEVICES_A),1], 
+                shape=[BATCH_SIZE//len(DEVICES_A),1],
                 minval=0.,
                 maxval=1.
             )
@@ -264,11 +266,11 @@ with tf.Session() as session:
             gradient_penalty = 10*tf.reduce_mean((slopes-1.)**2)
             disc_costs.append(gradient_penalty)
 
-    disc_wgan = tf.add_n(disc_costs) / len(DEVICES_A)
+    disc_wgan = tf.add_n(disc_costs) // len(DEVICES_A)
     if CONDITIONAL and ACGAN:
-        disc_acgan = tf.add_n(disc_acgan_costs) / len(DEVICES_A)
-        disc_acgan_acc = tf.add_n(disc_acgan_accs) / len(DEVICES_A)
-        disc_acgan_fake_acc = tf.add_n(disc_acgan_fake_accs) / len(DEVICES_A)
+        disc_acgan = tf.add_n(disc_acgan_costs) // len(DEVICES_A)
+        disc_acgan_acc = tf.add_n(disc_acgan_accs) // len(DEVICES_A)
+        disc_acgan_fake_acc = tf.add_n(disc_acgan_fake_accs) // len(DEVICES_A)
         disc_cost = disc_wgan + (ACGAN_SCALE*disc_acgan)
     else:
         disc_acgan = tf.constant(0.)
@@ -287,7 +289,7 @@ with tf.Session() as session:
     gen_acgan_costs = []
     for device in DEVICES:
         with tf.device(device):
-            n_samples = GEN_BS_MULTIPLE * BATCH_SIZE / len(DEVICES)
+            n_samples = GEN_BS_MULTIPLE * BATCH_SIZE // len(DEVICES)
             fake_labels = tf.cast(tf.random_uniform([n_samples])*10, tf.int32)
             if CONDITIONAL and ACGAN:
                 disc_fake, disc_fake_acgan = Discriminator(Generator(n_samples,fake_labels), fake_labels)
@@ -297,9 +299,9 @@ with tf.Session() as session:
                 ))
             else:
                 gen_costs.append(-tf.reduce_mean(Discriminator(Generator(n_samples, fake_labels), fake_labels)[0]))
-    gen_cost = (tf.add_n(gen_costs) / len(DEVICES))
+    gen_cost = (tf.add_n(gen_costs) // len(DEVICES))
     if CONDITIONAL and ACGAN:
-        gen_cost += (ACGAN_SCALE_G*(tf.add_n(gen_acgan_costs) / len(DEVICES)))
+        gen_cost += (ACGAN_SCALE_G*(tf.add_n(gen_acgan_costs) // len(DEVICES)))
 
 
     gen_opt = tf.train.AdamOptimizer(learning_rate=LR*decay, beta1=0., beta2=0.9)
@@ -324,7 +326,7 @@ with tf.Session() as session:
     samples_100 = Generator(100, fake_labels_100)
     def get_inception_score(n):
         all_samples = []
-        for i in xrange(n/100):
+        for i in xrange(n//100):
             all_samples.append(session.run(samples_100))
         all_samples = np.concatenate(all_samples, axis=0)
         all_samples = ((all_samples+1.)*(255.99/2)).astype('int32')
@@ -339,7 +341,7 @@ with tf.Session() as session:
 
 
     for name,grads_and_vars in [('G', gen_gv), ('D', disc_gv)]:
-        print "{} Params:".format(name)
+        print("{} Params:".format(name))
         total_param_count = 0
         for g, v in grads_and_vars:
             shape = v.get_shape()
@@ -351,12 +353,12 @@ with tf.Session() as session:
             total_param_count += param_count
 
             if g == None:
-                print "\t{} ({}) [no grad!]".format(v.name, shape_str)
+                print("\t{} ({}) [no grad!]".format(v.name, shape_str))
             else:
-                print "\t{} ({})".format(v.name, shape_str)
-        print "Total param count: {}".format(
+                print("\t{} ({})".format(v.name, shape_str))
+        print("Total param count: {}".format(
             locale.format("%d", total_param_count, grouping=True)
-        )
+        ))
 
     session.run(tf.initialize_all_variables())
 
